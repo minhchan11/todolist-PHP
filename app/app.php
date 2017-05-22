@@ -1,72 +1,38 @@
 <?php
+  //set up modules
   require_once __DIR__."/../vendor/autoload.php";
   require_once __DIR__."/../src/Task.php";
 
 
-
+  //Instantiate session
   session_start();
 
   if (empty($_SESSION['listTask'])) {
     $_SESSION['listTask'] = array();
   };
 
+  //Initialize app and template
   $app = new Silex\Application();
+  $app->register(new Silex\Provider\TwigServiceProvider(), array(
+    'twig.path' => __DIR__.'/../views'
+));
 
-  $app->get("/", function(){
-
-    $output = "";
-    $list_tasks = Task::getAll();
-    if(!empty($list_tasks))
-    {
-      $output = $output . "
-      <h1>To Do List</h1>
-      <p>
-        All your tasks
-      </p>
-      ";
-      foreach ($list_tasks as $task) {
-        $output = $output . "<p>" . $task->getDescription() . "</p>";
-      }
-    }
-
-    $output = $output . "
-    <form action='/tasks' method='post'>
-      <label for='description'>Task Description<label>
-      <input type='text' name='description' id='description'>
-
-      <button type='submit' name='button'>Submit</button>
-    </form>
-    ";
-
-    $output = $output . "
-    <form action='/delete_tasks' method='post'>
-      <button type='submit' name='button'>Delete</button>
-    </form>
-    ";
-
-    return $output;
+  //Get tasks route
+  $app->get("/", function() use ($app){
+    return $app['twig']->render('tasks.html.twig', array('tasks' => Task::getAll()));
   });
 
-  $app->post("/tasks", function(){
+  //Post save task
+  $app->post("/tasks", function() use ($app){
     $task = new Task($_POST['description']);
     $task->save();
-    return "
-    <h1>You created a task</h1>
-    <p>" . $task->getDescription() .
-    "</p>
-    <p>
-      <a href='/'>List of tasks to do</a>
-    </p>
-    ";
+    return $app['twig']->render('create_task.html.twig', array('newtask' => $task));
   });
 
-  $app->post("/delete_tasks",function (){
-    Task::deleteAll;
-
-    return "
-      <h1>List Cleared!</h1>
-      <p><a href='/'>Home</a></p>
-  ";
+  //Post delete
+  $app->post("/delete_tasks",function () use($app){
+    Task::deleteAll();
+    return $app['twig']->render('delete_tasks.html.twig');
 });
 
   return $app;
